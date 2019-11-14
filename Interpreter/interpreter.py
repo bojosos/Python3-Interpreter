@@ -13,12 +13,12 @@ class Interpreter(NodeVisitor):
         self.call_stack = CallStack()
 
     def visit_Program(self, node):
-        #ar = ActivationRecord('Program', ARType.PROGRAM, 1)
-        self.symbol_table = ScopedSymbolTable(scope_name='global', scope_level=1, enclosing_scope=self.symbol_table)
-        #call_stack.push(ar)
+        ar = ActivationRecord('Program', ARType.PROGRAM, 1)
+        #self.symbol_table = ScopedSymbolTable(scope_name='global', scope_level=1, enclosing_scope=self.symbol_table)
+        self.call_stack.push(ar)
         self.visit(node.block)
-        #self.call_stack.pop(ar)
-        self.symbol_table = self.symbol_table.enclosing_scope
+        self.call_stack.pop()
+        #self.symbol_table = self.symbol_table.enclosing_scope
 
     def visit_Block(self, node):
         for child in node.children:
@@ -107,14 +107,19 @@ class Interpreter(NodeVisitor):
 
     def visit_FuncCall(self, node):
         if node.name == 'print':
+            """
             self.symbol_table = ScopedSymbolTable(node.name, self.symbol_table.scope_level + 1, self.symbol_table,ScopeType.DEFAULT)
             self.symbol_table.insert(FuncDefSymbol(node.name, node.params, None))
+            """
+            ar = ActivationRecord(node.name, ARType.FUNC, self.call_stack.count + 1)
             self.visit(node.params)
+            """
             for par in self.symbol_table._symbols:
                 symbol = self.symbol_table.lookup(par)
                 if type(symbol) is VarSymbol:
                     print(symbol.value)
             self.symbol_table = self.symbol_table.enclosing_scope
+            """
         func = self.symbol_table.lookup(node.name)
         if func:
             table = ScopedSymbolTable(node.name, self.symbol_table.scope_level + 1, self.symbol_table, ScopeType.FUNCTION)

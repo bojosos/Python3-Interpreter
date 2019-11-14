@@ -1,11 +1,12 @@
 from visitor import *
-from symbol_table import ScopedSymbolTable
-from symbol import VarSymbol
+from symbol_table import ScopedSymbolTable, SymbolTreeNode
+from symbol import VarSymbol, FuncDefSymbol, IfStatementSymbol
+
 
 class SemanticAnalyzer(NodeVisitor):
     def __init__(self):
         self.current_scope = None
-        #self.symbol_table = symbol_table
+        self.symbol_tree = None
 
     def visit_Block(self, node):
         for child in node.children:
@@ -19,12 +20,15 @@ class SemanticAnalyzer(NodeVisitor):
         pass
 
     def visit_IfStatement(self, node):
+        self.symbol_tree.insert(IfStatementSymbol(node.exec_block))
+        self.symbol_tree = self.symbol_tree.children[-1]
         self.visit(node.exec_block)
-
-    def visit_FuncDef(self, node):
-        pass
+        self.symbol_tree = self.symbol_tree.parent
     
     def visit_Params(self, node):
+        pass
+
+    def visit_Return(self, node):
         pass
 
     def visit_Condition(self, node):
@@ -66,13 +70,20 @@ class SemanticAnalyzer(NodeVisitor):
         pass
 
     def visit_FuncDef(self, node):
-        pass
+        self.symbol_tree.insert(FuncDefSymbol(node.name, node.params, node.exec_block))
+        self.symbol_tree = self.symbol_tree.children[-1]
+        self.visit(node.exec_block)
+        self.symbol_tree = self.symbol_tree.parent
 
     def visit_Program(self, node):
-        global_scope = ScopedSymbolTable(scope_name='global', scope_level=1,enclosing_scope=self.current_scope)
+        global_scope = ScopedSymbolTable(scope_name='global', scope_level=1, enclosing_scope=self.current_scope)
         global_scope._init_builtins()
-
+        self.symbol_tree = SymbolTreeNode('program', None, None)
         self.current_scope = global_scope
 
         self.visit(node.block)
         self.current_scope = self.current_scope.enclosing_scope
+
+    def analyze(self, tree):
+        self.visit(tree)
+        return self.symbol_tree

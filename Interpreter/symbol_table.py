@@ -2,21 +2,41 @@ from symbol import BuiltinTypeSymbol
 from enum import Enum
 
 
-class SymbolTable(object):
-    def __init__(self):
-        self.symbols = {}
-        self._init_builtins()
-
-    def _init_builtins(self):
-        self.insert(BuiltinTypeSymbol('INTERGER'))
-        self.insert(BuiltinTypeSymbol('REAL'))
+class SymbolTreeNode(object):
+    def __init__(self, node_name, parent, symbol):
+        self.node_name = node_name
+        self.parent = parent
+        self.symbol = symbol
+        self.children = []
 
     def insert(self, symbol):
-        self.symbols[symbol.name] = symbol
+        self.children.append(SymbolTreeNode(symbol.name, self, symbol))
+        return len(self.children) - 1
 
-    def lookup(self, name):
-        return self.symbols.get(name)
+    def dfs_for_print(self):
+        import queue as queue
+        q = queue.Queue()
+        lns = ''
+        q.put(self.children)
+        lns += 'root: '
+        for child in self.children:
+            lns += str(child.symbol) + ' '
 
+        line = 0
+        while not q.empty():
+            lns += '\n'
+            line += 1
+            lns += str(line) + ': '
+            for child in q.get():
+                q.put(child.children)
+                lns += str(child.symbol) + ' '
+
+        return lns
+
+    def __str__(self):
+        return self.dfs_for_print()
+
+    __repr__ = __str__
 
 class ScopeType(Enum):
     FUNCTION = 'FUNCTION'
