@@ -27,17 +27,15 @@ def main():
     semantic_analyzer = SemanticAnalyzer()
 
     try:
-        symbol_tree = semantic_analyzer.analyze(tree) # This analyzes for errors but should not
+        semantic_analyzer.analyze(tree) # This analyzes for errors but should not
     except Exception as e:
         #print(e)
         import traceback
         traceback.print_exc()
-        symbol_tree = None
 
-    print(symbol_tree)
-
-    #interpreter = Interpreter(tree)
-    #interpreter.interpret()
+    interpreter = Interpreter(tree)
+    interpreter.interpret()
+    print('test')
 
 
 if __name__ == '__main__':

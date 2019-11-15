@@ -1,5 +1,6 @@
 from symbol import BuiltinTypeSymbol
 from enum import Enum
+from AST import AST
 
 
 class SymbolTreeNode(object):
@@ -8,10 +9,47 @@ class SymbolTreeNode(object):
         self.parent = parent
         self.symbol = symbol
         self.children = []
+        self.childIdx = 0
+        self.members = {}
 
-    def insert(self, symbol):
+    def next_child(self):
+        self.childIdx += 1
+        return self.children[self.childIdx - 1]
+
+    def insertVar(self, symbol):
+        self.members[symbol.name] = symbol
+
+    def insertChild(self, symbol):
+        if symbol.name is AST:
+            print()
         self.children.append(SymbolTreeNode(symbol.name, self, symbol))
         return len(self.children) - 1
+
+    def lookup_function(self, name):
+        if self.symbol is not None and self.symbol.name == name:
+            return self.symbol
+
+        var = None
+        for func in self.children:
+            if func.symbol.name == name:
+                var = func.symbol
+
+        if var is not None:
+            return var
+
+        if self.parent is not None:
+            return self.parent.lookup_function(name)
+        return None
+
+    def lookup(self, name):
+        var = self.members.get(name)
+
+        if var is not None:
+            return var
+
+        if self.parent is not None:
+            return self.parent.lookup(name)
+        return None
 
     def dfs_for_print(self):
         import queue as queue

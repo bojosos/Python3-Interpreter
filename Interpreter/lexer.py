@@ -112,7 +112,7 @@ class Lexer(object):
 #
     def get_actual_indent(self):
         res = 0
-        while self.text[self.pos + res] == ' ':
+        while len(self.text) > self.pos + res and self.text[self.pos + res] == ' ':
             #print(self.text[self.pos + res])
             #print('wtf:', self.text[self.pos + res])
             res += 1

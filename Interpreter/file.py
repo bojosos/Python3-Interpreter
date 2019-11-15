@@ -3,10 +3,14 @@ def ab(n):
 c=5
 ff=ab(5000)
 def fib(n):
-    if n == 0:
-        return 0
-    if n == 1:
-        return 1
+    def check(n):
+        if n == 0:
+            return 0
+        if n == 1:
+            return 1
+
+    if n == 0 or n == 1:
+        return check(n)
     
     return fib(n-1) + fib(n-2)
 a = 5
@@ -18,6 +22,31 @@ def factorial(n):
     return n * factorial(n - 1)
 a=100
 res = factorial(a)
+print(c)
 print(ff)
+print(ab(2000))
 print(res)
 print(fff)
+
+v1 = 5
+v2 = 10
+v3 = 2
+v4 = 6
+
+if v1 < v2:
+    if v2 >= v3:
+        if v4 > v3 and (v3 < v2 or v1 >= v4):
+            v5 = 10000
+        print(v5)
+        if (((v5 == 1000))):
+            v6 = 100000
+        if 3 == 4:
+            v7 = 10
+        if 2 != 2:
+            v8 = 5
+        if 3 - 2 < 0:
+            v9 = 1
+        if 2 - 3 < 0:
+            v10 = 1
+            v3 = 100
+    v3 = 30

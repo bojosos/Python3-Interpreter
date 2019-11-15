@@ -15,8 +15,9 @@ class BuiltinTypeSymbol(Symbol):
 
 
 class IfStatementSymbol(Symbol):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, block):
+        super().__init__('if_statement')
+        self.exec_block = block
 
     def __str__(self):
         return '<IfStatement{name}>'.format(name=self.name)

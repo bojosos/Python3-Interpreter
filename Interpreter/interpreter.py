@@ -1,24 +1,25 @@
 from mytoken import TokenType
 from visitor import NodeVisitor
 from call_stack import CallStack
-from symbol_table import ScopedSymbolTable, ScopeType
+from symbol_table import SymbolTreeNode
 from activation_record import ARType, ActivationRecord
-from symbol import VarSymbol, FuncDefSymbol
+from symbol import VarSymbol, FuncDefSymbol, IfStatementSymbol, Symbol
 
 
 class Interpreter(NodeVisitor):
+
+    UNIT_TESTING = False
+
     def __init__(self, tree):
         self.tree = tree
-        self.symbol_table = None
+        self.symbol_tree = SymbolTreeNode('program', None, None)
         self.call_stack = CallStack()
+        if Interpreter.UNIT_TESTING:
+            self.debug_memory = {}
 
     def visit_Program(self, node):
-        ar = ActivationRecord('Program', ARType.PROGRAM, 1)
-        #self.symbol_table = ScopedSymbolTable(scope_name='global', scope_level=1, enclosing_scope=self.symbol_table)
-        self.call_stack.push(ar)
         self.visit(node.block)
-        self.call_stack.pop()
-        #self.symbol_table = self.symbol_table.enclosing_scope
+        print('')
 
     def visit_Block(self, node):
         for child in node.children:
@@ -52,13 +53,15 @@ class Interpreter(NodeVisitor):
 
     def visit_IfStatement(self, node):
         r = self.visit(node.condition)
-        # print('Condition returned:', r)
         if r:
-            table = ScopedSymbolTable('if', self.symbol_table.scope_level + 1, self.symbol_table, ScopeType.DEFAULT)
-            self.symbol_table = table
-            # print('visiting: %d' % len(node.exec_block.children))
+            #self.symbol_tree.insertChild(IfStatementSymbol(node.exec_block))
+            #self.symbol_tree = self.symbol_tree.children[-1]
+
+            # Turn out variables in python are scoped to the innermost function, class, module
+            # huh who knew
+            
             self.visit(node.exec_block)
-            self.symbol_table = self.symbol_table.enclosing_scope
+            #self.symbol_tree = self.symbol_tree.parent
         else:
             for el in node.elifs:
                 if self.visit(el):
@@ -97,47 +100,45 @@ class Interpreter(NodeVisitor):
         ar = ActivationRecord('return', ARType.RETURN, self.call_stack.count + 1)
         ar['return'] = a
         self.call_stack.push(ar)
-        """
-        self.symbol_table = table
-        self.symbol_table.insert(ReturnSymbol(a))
-        """
+
     def visit_FuncDef(self, node):
-        self.symbol_table.insert(FuncDefSymbol(node.name, node.params, node.exec_block))
-        # self.visit(node.params)
+        self.symbol_tree.insertChild(FuncDefSymbol(node.name, node.params, node.exec_block))
 
     def visit_FuncCall(self, node):
+
         if node.name == 'print':
-            """
-            self.symbol_table = ScopedSymbolTable(node.name, self.symbol_table.scope_level + 1, self.symbol_table,ScopeType.DEFAULT)
-            self.symbol_table.insert(FuncDefSymbol(node.name, node.params, None))
-            """
-            ar = ActivationRecord(node.name, ARType.FUNC, self.call_stack.count + 1)
-            self.visit(node.params)
-            """
-            for par in self.symbol_table._symbols:
-                symbol = self.symbol_table.lookup(par)
-                if type(symbol) is VarSymbol:
-                    print(symbol.value)
-            self.symbol_table = self.symbol_table.enclosing_scope
-            """
-        func = self.symbol_table.lookup(node.name)
+            self.symbol_tree.insertChild(Symbol('print'))
+            self.symbol_tree = self.symbol_tree.children[-1]
+            for par in node.params.params:
+                val = self.visit(par)
+                if Interpreter.UNIT_TESTING:
+                    self.debug_memory[par.value] = val
+
+                print(val)
+
+            self.symbol_tree = self.symbol_tree.parent
+            return
+
+        func = self.symbol_tree.lookup_function(node.name)
         if func:
-            table = ScopedSymbolTable(node.name, self.symbol_table.scope_level + 1, self.symbol_table, ScopeType.FUNCTION)
-            self.symbol_table = table
+            self.symbol_tree.insertChild(IfStatementSymbol(''))
+            self.symbol_tree = self.symbol_tree.children[-1]
+
             self.visit(node.params)
             self.visit(func.exec_block)
-            self.symbol_table = self.symbol_table.enclosing_scope
+
+            self.symbol_tree = self.symbol_tree.parent
+            # self.symbol_table = self.symbol_table.enclosing_scope
             return self.call_stack.pop().members['return']
         else:
-            pass  # Error
+            raise Exception('Function definition not found')
 
     def visit_Params(self, node):
-        ar = ActivationRecord(node.name, ARType.FUNC, self.call_stack.count + 1)
+        # ar = ActivationRecord(node.name, ARType.FUNC, self.call_stack.count + 1)
         for i in range(len(node.params)):
             param = node.params[i]
-            var_name = self.symbol_table.lookup(node.name).params.params[i].value
-
-            self.symbol_table.insert(VarSymbol(var_name, self.visit(param)))
+            var_name = self.symbol_tree.lookup_function(node.name).params.params[i].value
+            self.symbol_tree.insertVar(VarSymbol(var_name, self.visit(param)))
 
     def visit_Num(self, node):
         return node.value
@@ -154,14 +155,19 @@ class Interpreter(NodeVisitor):
         var_name = self.visit(node.left)
         var_value = self.visit(node.right)
 
-        self.symbol_table.insert(VarSymbol(var_name, var_value))
+        print(str(var_name) + ':' + str(var_value))
+
+        #if var_name == 'a':
+        #    print()
+
+        self.symbol_tree.insertVar(VarSymbol(var_name, var_value))
 
     def visit_Var(self, node):
         var_name = node.value
 
-        var_value = self.symbol_table.lookup(var_name)
+        var_value = self.symbol_tree.lookup(var_name)
         if var_value is None:
-            self.symbol_table.lookup(var_name)
+            print()
         return var_value.value
 
     def visit_VarDecl(self, node):
