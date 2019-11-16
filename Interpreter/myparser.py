@@ -1,5 +1,6 @@
 from AST import *
 from mytoken import *
+from error import ParserError, ErrorCode
 
 
 class Parser(object):
@@ -9,24 +10,15 @@ class Parser(object):
         self.current_token = self.lexer.get_next_token()
         self.current_indent = 0
 
-    def error(self):
-        # pass
-        raise Exception('Invalid syntax')
+    def error(self, error_code, token):
+        print(token)
+        raise ParserError(error_code=error_code.value, token=token, message=f'{error_code.value} -> {token}')
 
     def eat(self, token_type):
-        # compare the current token type with the passed token
-        # type and if they match then "eat" the current token
-        # and assign the next token to the self.current_token,
-        # otherwise raise an exception.
         if self.current_token.type == token_type:
-            # print(self.current_token)
-            # print('old token: ', self.current_token)
-            # self.lexer.indent = self.lexer.get_actual_indent()
-            # print('idnent: ' , self.lexer.get_actual_indent())
             self.current_token = self.lexer.get_next_token()
-            # print(self.current_token)
         else:
-            self.error()
+            self.error(error_code=ErrorCode.UNEXPECTED_TOKEN, token=self.current_token)
 
     def get_indent(self):
         return self.lexer.get_indent()
@@ -49,10 +41,10 @@ class Parser(object):
             self.eat(TokenType.INTEGER_CONST)
             # print('Eating int')
             # print(self.current_token)
-            return Num(token)
+            return Num(token.value)
         if token.type == TokenType.REAL_CONST:
             self.eat(TokenType.REAL_CONST)
-            return Num(token)
+            return Num(token.value)
         if token.type == TokenType.LPAREN:
             # print('LPAREN')
             self.eat(TokenType.LPAREN)
@@ -83,20 +75,9 @@ class Parser(object):
 
         return node
 
-    def expr(self):
-        """Arithmetic expression parser / interpreter.
-
-        calc> 7 + 3 * (10 / (12 / (3 + 1) - 1))
-        22
-
-        expr   : term ((PLUS | MINUS) term)*
-        term   : factor ((MUL | DIV) factor)*
-        factor : (PLUS | MINUS) factor | INTEGER | LPAREN expr RPAREN
-        """
+    def low_expr(self):
         node = self.term()
-        while self.current_token.type in (
-        TokenType.PLUS, TokenType.MINUS, TokenType.LSS, TokenType.EQU, TokenType.NEQ, TokenType.GTR, TokenType.GEQ,
-        TokenType.LEQ):
+        while self.current_token.type in (TokenType.PLUS, TokenType.MINUS):
             token = self.current_token
 
             self.eat(token.type)
@@ -106,19 +87,6 @@ class Parser(object):
         return node
 
     def program(self):
-
-        """
-        program: block
-        block: statement_list -> the whole program or a function declaration
-        statement_list: statement -> the list of commands in a function or program
-        statement: empty | assign_statement | compound_statement(do I need this?) -> a command
-        empty:
-        assign_statement: variable ASSIGN expr
-        expr: term ((PLUS | MINUS) term)*
-        term: factor ((MUL | FLOATDIV | INTEGERDIV) factor)*
-        factor: PLUS factor | MINUS factor | INTEGER_CONST | REAL_CONST | LPAREN expr RPAREN | variable
-        variable: ID
-        """
         root = Program(self.block(self.get_indent()))
         return root
 
@@ -137,7 +105,7 @@ class Parser(object):
         # print(node)
 
         result = [node]
-        #print('indent: %d, get_indent %d' % (indent, self.get_indent()))
+        # print('indent: %d, get_indent %d' % (indent, self.get_indent()))
         while indent == self.get_indent() and self.current_token.type != TokenType.EOF:
             result.append(self.statement(self.get_indent()))
 
@@ -146,10 +114,42 @@ class Parser(object):
 
         return result
 
+    def while_loop(self):
+        self.eat(TokenType.WHILE)
+        condition = self.condition()
+        self.eat(TokenType.COLON)
+
+        exec_block = self.block(self.get_indent())
+
+        return WhileLoop(condition, exec_block)
+
+    def for_loop(self):
+        self.eat(TokenType.FOR)
+        var = self.variable_decl()
+        self.eat(TokenType.IN)
+        if self.current_token.type == TokenType.RANGE:
+            self.eat(TokenType.RANGE)
+            end = 'range'
+            self.eat(TokenType.LPAREN)
+            range = [self.factor()]
+
+            while self.current_token.type == TokenType.COMMA:
+                self.eat(TokenType.COMMA)
+                range.append(self.factor())
+                if len(range) > 3:
+                    self.error(ErrorCode.PARAMS, self.current_token)
+            self.eat(TokenType.RPAREN)
+            self.eat(TokenType.COLON)
+            exec_block = self.block(self.get_indent())
+            return ForLoop(var, end, range, exec_block)
+        elif self.current_token.type == TokenType.ENUMERATE:
+            end = 'enumerate'
+        else:
+            end = self.id()
     def ret(self):
         self.eat(TokenType.RETURN)
         expr = self.expr()
-        #print(expr)
+        # print(expr)
         return Return(expr)
 
     def statement(self, indent):
@@ -165,10 +165,15 @@ class Parser(object):
         elif self.current_token.type == TokenType.DEF:
             node = self.func_def(self.get_indent())
         elif self.current_token.type == TokenType.RETURN:
-            # print('Got ret')
             node = self.ret()
         elif self.current_token.type == TokenType.FUNC_CALL:
             node = self.func_call()
+        elif self.current_token.type == TokenType.WHILE:
+            node = self.while_loop()
+        elif self.current_token.type == TokenType.FOR:
+            node = self.for_loop()
+        elif self.current_token.type == TokenType.CONTINUE:
+            node = self.continue_loop()
         else:
             node = self.empty()
             # print('it\'s else')
@@ -253,6 +258,19 @@ class Parser(object):
                 exprs.append((self.expr(), token.type))
         # print(exprs)
         return Condition(exprs)
+
+    def expr(self):
+        node = self.low_expr()
+
+        while self.current_token.type in (TokenType.LSS, TokenType.EQU, TokenType.NEQ, TokenType.GTR,
+                                          TokenType.GEQ, TokenType.LEQ):
+            token = self.current_token
+
+            self.eat(token.type)
+
+            node = BinOp(node, token, self.low_expr())
+
+        return node
 
     def assignment_statement(self):
         left = self.variable_decl()

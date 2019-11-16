@@ -20,45 +20,47 @@ class TokenType(Enum):
     EQU              = '=='
     NEQ              = '!='
 
-    # block of reserver words
+    # block of reserved words
     REAL             = 'FLOAT'
     INTEGER          = 'INTEGER'
     INTEGER_DIV      = 'INTEGER_DIV'
     IF               = 'IF'
-    DEF              = 'DEF'
-    AND              = 'AND'
-    OR               = 'OR'
     ELSE             = 'ELSE'
     ELIF             = 'ELIF'
+    AND              = 'AND'
+    OR               = 'OR'
+    DEF              = 'DEF'
     RETURN           = 'RETURN'
+    WHILE            = 'WHILE'
+    FOR              = 'FOR'
+    IN               = 'IN'
+    RANGE            = 'RANGE'
+    ENUMERATE        = 'ENUMERATE'
+    CONTINUE         = 'CONTINUE'
 
     # misc
     EOF              = 'EOF'
     EOL              = 'EOL'
-    FUNC_CALL         = 'FUNCCALL'
+    FUNC_CALL        = 'FUNCCALL'
     INDENT           = 'INDENT'
     REAL_CONST       = 'REAL_CONST'
     INTEGER_CONST    = 'INTEGER_CONST'
     ID               = 'ID'
 
 class Token(object):
-    def __init__(self, type, value):
+    def __init__(self, type, value, lineno=None, column=None):
         self.type = type
         self.value = value
+        self.lineno = lineno
+        self.column = column
         #print(self.type)
 
     def __str__(self):
-        """String representation of the class instance.
-
-        Examples:
-            Token(INTEGER, 3)
-            Token(PLUS, '+')
-            Token(MUL, '*')
-        """
-        return 'Token({type}, {value})'.format(
+        return 'Token({type}, {value}, position={lineno}:{column})'.format(
             type=self.type,
-            value=repr(self.value)
+            value=repr(self.value),
+            lineno=self.lineno,
+            column=self.column,
         )
 
-    def __repr__(self):
-        return self.__str__()
+    __repr__ = __str__

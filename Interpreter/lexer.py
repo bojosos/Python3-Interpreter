@@ -141,7 +141,6 @@ class Lexer(object):
 
             if self.current_char.isspace():
 #                print('Eating space')
-                #print('skipping space')
                 self.skip_whitespace()
                 continue
             
@@ -159,61 +158,82 @@ class Lexer(object):
         
             if self.chars(6) == 'return':
                 self.advance(6)
-                return Token(TokenType.RETURN, 'return')
+                return Token(TokenType.RETURN, 'return', self.lineno, self.column)
 
             if self.chars(3) == 'def':
                 self.advance(3)
-                return Token(TokenType.DEF, 'def')
+                return Token(TokenType.DEF, 'def', self.lineno, self.column)
+
+            if self.chars(5) == 'while':
+                self.advance(5)
+                return Token(TokenType.WHILE, 'while', self.lineno, self.column)
+
+            if self.chars(3) == 'for':
+                self.advance(3)
+                return Token(TokenType.FOR, 'for', self.lineno, self.column)
+
+            if self.chars(2) == 'in':
+                self.advance(2)
+                return Token(TokenType.IN, 'in', self.lineno, self.column)
+
+            if self.chars(5) == 'range':
+                self.advance(5)
+                return Token(TokenType.RANGE, 'range', self.lineno, self.column)
+
+            if self.chars(9) == 'enumerate':
+                self.advance(9)
+                return Token(TokenType.ENUMERATE, 'enumerate', self.lineno, self.column)
 
             if self.chars(2) == 'or':
                 self.advance(2)
-                return Token(TokenType.OR, 'or')
+                return Token(TokenType.OR, 'or', self.lineno, self.column)
 
             if self.chars(3) == 'and':
                 self.advance(3)
-                return Token(TokenType.AND, 'and')
+                return Token(TokenType.AND, 'and', self.lineno, self.column)
         
             if self.chars(2) == 'if':
                 self.advance(2)
-                return Token(TokenType.IF, 'if')
+                return Token(TokenType.IF, 'if', self.lineno, self.column)
             
             if self.chars(2) == '!=':
                 self.advance(2)
-                return Token(TokenType.NEQ, '!=')
+                return Token(TokenType.NEQ, '!=', self.lineno, self.column)
 
             if self.chars(2) == '//':
                 self.advance(2)
-                return Token(TokenType.FLOAT_DIV, '//')
+                return Token(TokenType.FLOAT_DIV, '//', self.lineno, self.column)
 
             if self.chars(4) == 'else':
                 self.advance(4)
-                return Token(TokenType.ELSE, 'else')
+                return Token(TokenType.ELSE, 'else', self.lineno, self.column)
 
             if self.chars(4) == 'elif':
                 self.advance(4)
-                return Token(TokenType.ELIF, 'elif')
+                return Token(TokenType.ELIF, 'elif', self.lineno, self.column)
 
             if self.current_char.isalpha() or self.current_char == '_':
                 return self._id()
 
             if self.chars(2) == '==':
                 self.advance(2)
-                return Token(TokenType.EQU, '==')
+                return Token(TokenType.EQU, '==', self.lineno, self.column)
             
             if self.chars(2) == '<=':
                 self.advance(2)
-                return Token(TokenType.LEQ, '<=')
+                return Token(TokenType.LEQ, '<=', self.lineno, self.column)
           
             if self.chars(2) == '>=':
                 self.advance(2)
-                return Token(TokenType.GEQ, '>=')
+                return Token(TokenType.GEQ, '>=', self.lineno, self.column)
            
             try:
-                token = Token(TokenType(self.current_char), '')
+                token_type = TokenType(self.current_char)
+            except ValueError:
+                self.error()
+            else:
+                token = Token(token_type, token_type.value, self.lineno, self.column)
                 self.advance(1)
                 return token
-            except:
-                return Token(TokenType.EOF, None)
-                self.error()
         
-        return Token(TokenType.EOF, None)
+        return Token(TokenType.EOF, None, self.lineno, self.column)

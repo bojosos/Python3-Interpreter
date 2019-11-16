@@ -4,10 +4,10 @@ from call_stack import CallStack
 from symbol_table import SymbolTreeNode
 from activation_record import ARType, ActivationRecord
 from symbol import VarSymbol, FuncDefSymbol, IfStatementSymbol, Symbol
+from error import InterpreterError, ErrorCode
 
 
 class Interpreter(NodeVisitor):
-
     UNIT_TESTING = False
 
     def __init__(self, tree):
@@ -54,14 +54,14 @@ class Interpreter(NodeVisitor):
     def visit_IfStatement(self, node):
         r = self.visit(node.condition)
         if r:
-            #self.symbol_tree.insertChild(IfStatementSymbol(node.exec_block))
-            #self.symbol_tree = self.symbol_tree.children[-1]
+            # self.symbol_tree.insertChild(IfStatementSymbol(node.exec_block))
+            # self.symbol_tree = self.symbol_tree.children[-1]
 
             # Turn out variables in python are scoped to the innermost function, class, module
             # huh who knew
-            
+
             self.visit(node.exec_block)
-            #self.symbol_tree = self.symbol_tree.parent
+            # self.symbol_tree = self.symbol_tree.parent
         else:
             for el in node.elifs:
                 if self.visit(el):
@@ -100,6 +100,17 @@ class Interpreter(NodeVisitor):
         ar = ActivationRecord('return', ARType.RETURN, self.call_stack.count + 1)
         ar['return'] = a
         self.call_stack.push(ar)
+
+    def visit_WhileLoop(self, node):
+        while self.visit(node.condition):
+            print('aaa')
+            self.visit(node.exec_block)
+
+    def visit_ForLoop(self, node):
+        if node.end == 'range':
+            for i in range(self.visit(node.range[0]), self.visit(node.range[1]), self.visit(node.range[2])):
+                self.symbol_tree.insertVar(VarSymbol(self.visit(node.var), i))
+                self.visit(node.exec_block)
 
     def visit_FuncDef(self, node):
         self.symbol_tree.insertChild(FuncDefSymbol(node.name, node.params, node.exec_block))
@@ -157,7 +168,7 @@ class Interpreter(NodeVisitor):
 
         print(str(var_name) + ':' + str(var_value))
 
-        #if var_name == 'a':
+        # if var_name == 'a':
         #    print()
 
         self.symbol_tree.insertVar(VarSymbol(var_name, var_value))
@@ -166,8 +177,10 @@ class Interpreter(NodeVisitor):
         var_name = node.value
 
         var_value = self.symbol_tree.lookup(var_name)
+
         if var_value is None:
-            print()
+            raise InterpreterError(error_code=ErrorCode.ID_NOT_FOUND)
+
         return var_value.value
 
     def visit_VarDecl(self, node):

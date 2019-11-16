@@ -50,3 +50,14 @@ if v1 < v2:
             v10 = 1
             v3 = 100
     v3 = 30
+
+print(1 + 2 == 3)
+print(1 == 1)
+print(1 + 2 == 1)
+print(1 + 2 == 2)
+print(1 == 1 +2)
+print(1 == 2 + 1)
+print(1 == 2)
+
+for i in range(10):
+    print(i)
