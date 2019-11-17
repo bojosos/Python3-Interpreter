@@ -15,6 +15,14 @@ class Block(AST):
         self.children = []
 
 
+class Continue(AST):
+    pass
+
+
+class LoopBlock(Block):
+    pass
+
+
 class Assign(AST):
     def __init__(self, left, op, right):
         self.left = left
@@ -34,16 +42,20 @@ class VarDecl(AST):
 
 
 class WhileLoop(AST):
-    def __init__(self, condition, exec_block):
+    def __init__(self, condition, exec_block, else_exec_block):
         self.condition = condition
+        self.broken = True
         self.exec_block = exec_block
+        self.else_exec_block = else_exec_block
 
 
 class ForLoop(AST):
-    def __init__(self, var, end, range, exec_block):
+    def __init__(self, var, end, range, exec_block, else_exec_block):
         self.var = var
+        self.broken = False
         self.end = end
         self.exec_block = exec_block
+        self.else_exec_block = else_exec_block
         if len(range) == 1:
             self.range = [Num(0), range[0], Num(1)]
         elif len(range) == 2:

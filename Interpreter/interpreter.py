@@ -14,6 +14,7 @@ class Interpreter(NodeVisitor):
         self.tree = tree
         self.symbol_tree = SymbolTreeNode('program', None, None)
         self.call_stack = CallStack()
+        self.cont = False
         if Interpreter.UNIT_TESTING:
             self.debug_memory = {}
 
@@ -23,9 +24,25 @@ class Interpreter(NodeVisitor):
 
     def visit_Block(self, node):
         for child in node.children:
+            if self.cont:
+                break
             if self.call_stack.count != 0:
                 break
             self.visit(child)
+
+    def visit_LoopBlock(self, node):
+        for child in node.children:
+            if self.cont:
+                self.cont = False
+                return True
+            if self.call_stack.count != 0:
+                break
+            self.visit(child)
+
+        return False
+
+    def visit_Continue(self, node):
+        self.cont = True
 
     def visit_BinOp(self, node):
         if node.op.type == TokenType.PLUS:
@@ -68,22 +85,23 @@ class Interpreter(NodeVisitor):
                     break
             else:
                 if node.elseObj:
+                    print('elsing')
                     self.visit(node.elseObj)
 
     def visit_ElIf(self, node):
         r = self.visit(node.condition)
         if r:
-            ar = ActivationRecord('elif', ARType.ELIF, self.call_stack.count + 1)
-            self.call_stack.push(ar)
+            #ar = ActivationRecord('elif', ARType.ELIF, self.call_stack.count + 1)
+            #self.call_stack.push(ar)
             self.visit(node.exec_block)
-            for m in self.call_stack.peek().members:
-                del self.symbol_table.symbols[m]
-            self.call_stack.pop()
+            #for m in self.call_stack.peek().members:
+            #    del self.symbol_table.symbols[m]
+            #self.call_stack.pop()
             return True
         return False
 
     def visit_Else(self, node):
-        pass
+        self.visit(node.exec_block)
 
     def visit_Condition(self, node):
         res = self.visit(node.exprs[0])
@@ -105,12 +123,18 @@ class Interpreter(NodeVisitor):
         while self.visit(node.condition):
             print('aaa')
             self.visit(node.exec_block)
+        else:
+            if node.else_exec_block is not None:
+                self.visit(node.else_exec_block)
 
     def visit_ForLoop(self, node):
         if node.end == 'range':
             for i in range(self.visit(node.range[0]), self.visit(node.range[1]), self.visit(node.range[2])):
                 self.symbol_tree.insertVar(VarSymbol(self.visit(node.var), i))
                 self.visit(node.exec_block)
+            else:
+                if node.else_exec_block is not None:
+                    self.visit(node.else_exec_block)
 
     def visit_FuncDef(self, node):
         self.symbol_tree.insertChild(FuncDefSymbol(node.name, node.params, node.exec_block))

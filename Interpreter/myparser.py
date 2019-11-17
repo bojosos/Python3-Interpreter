@@ -90,8 +90,8 @@ class Parser(object):
         root = Program(self.block(self.get_indent()))
         return root
 
-    def block(self, indent):
-        root = Block()
+    def block(self, indent, block_type=Block):
+        root = block_type()
 
         nodes = self.statement_list(indent)
 
@@ -119,9 +119,19 @@ class Parser(object):
         condition = self.condition()
         self.eat(TokenType.COLON)
 
-        exec_block = self.block(self.get_indent())
+        exec_block = self.block(self.get_indent(), block_type=LoopBlock)
 
-        return WhileLoop(condition, exec_block)
+        else_exec_block = None
+        if self.current_token.type == TokenType.ELSE:
+            self.eat(TokenType.ELSE)
+            self.eat(TokenType.COLON)
+            else_exec_block = self.block(self.get_indent())
+
+        return WhileLoop(condition, exec_block, else_exec_block)
+
+    def cont(self):
+        self.eat(TokenType.CONTINUE)
+        return Continue()
 
     def for_loop(self):
         self.eat(TokenType.FOR)
@@ -140,8 +150,13 @@ class Parser(object):
                     self.error(ErrorCode.PARAMS, self.current_token)
             self.eat(TokenType.RPAREN)
             self.eat(TokenType.COLON)
-            exec_block = self.block(self.get_indent())
-            return ForLoop(var, end, range, exec_block)
+            exec_block = self.block(self.get_indent(), block_type=LoopBlock)
+            else_exec_block = None
+            if self.current_token.type == TokenType.ELSE:
+                self.eat(TokenType.ELSE)
+                self.eat(TokenType.COLON)
+                else_exec_block = self.block(self.get_indent())
+            return ForLoop(var, end, range, exec_block, else_exec_block)
         elif self.current_token.type == TokenType.ENUMERATE:
             end = 'enumerate'
         else:
@@ -173,7 +188,7 @@ class Parser(object):
         elif self.current_token.type == TokenType.FOR:
             node = self.for_loop()
         elif self.current_token.type == TokenType.CONTINUE:
-            node = self.continue_loop()
+            node = self.cont()
         else:
             node = self.empty()
             # print('it\'s else')
@@ -235,8 +250,6 @@ class Parser(object):
             self.eat(TokenType.ELSE)
             self.eat(TokenType.COLON)
 
-            if indent >= self.get_indent():
-                self.error()
             ex_block = self.block(self.get_indent())
             elseObj = Else(ex_block)
 

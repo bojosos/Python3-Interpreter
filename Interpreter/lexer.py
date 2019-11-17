@@ -168,6 +168,10 @@ class Lexer(object):
                 self.advance(5)
                 return Token(TokenType.WHILE, 'while', self.lineno, self.column)
 
+            if self.chars(8) == 'continue':
+                self.advance(8)
+                return Token(TokenType.CONTINUE, 'continue', self.lineno, self.column)
+
             if self.chars(3) == 'for':
                 self.advance(3)
                 return Token(TokenType.FOR, 'for', self.lineno, self.column)
