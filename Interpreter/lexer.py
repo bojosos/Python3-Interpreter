@@ -52,7 +52,7 @@ class Lexer(object):
             if self.current_char == '\n' or self.current_char == '\r':
                 if self.prev_token is not None and self.prev_token.type == TokenType.EOL:
                     res = 0
-                self.prev_token = Token(TokenType.EOL, self.current_char)
+                self.prev_token = Token(TokenType.EOL, self.current_char, self.lineno, self.column)
             if self.current_char == ' ':
                 res += 1
             self.advance()
@@ -85,9 +85,9 @@ class Lexer(object):
             self.advance()
 
         if self.current_char == '(' and (self.prev_token is None or self.prev_token.type != TokenType.DEF):
-            return Token(TokenType.FUNC_CALL, result)
+            return Token(TokenType.FUNC_CALL, result, self.lineno, self.column)
 
-        token = Token(TokenType.ID, result)
+        token = Token(TokenType.ID, result, self.lineno, self.column)
         return token
 
 #
@@ -137,7 +137,7 @@ class Lexer(object):
                     else:
                         self.advance(len(i.value))
                         return Token(i, i.value, self.lineno, self.column)
-                if i == TokenType.CONTINUE:
+                if i == TokenType.BREAK:
                     break
 
             # A function or variable name

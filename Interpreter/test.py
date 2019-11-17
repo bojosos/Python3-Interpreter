@@ -6,6 +6,9 @@ import io
 from lexer import Lexer
 from myparser import Parser
 from interpreter import Interpreter
+import time
+
+Timing = {}
 
 
 def block_print():
@@ -26,12 +29,16 @@ def make_interpreter(src):
     return interpreter
 
 
-def make_test(src):
+def make_test(src, name):
     stdout = sys.stdout
     sys.stdout = io.StringIO()
 
+    timer = [0, 0]
+
+    start = time.time()
     interpreter = make_interpreter(src)
     interpreter.interpret()
+    timer[0] = time.time() - start
 
     out1 = sys.stdout.getvalue()
     sys.stdout = stdout
@@ -39,7 +46,11 @@ def make_test(src):
     stdout = sys.stdout
     sys.stdout = io.StringIO()
 
+    start = time.time()
     exec(src, {})
+    timer[1] = time.time() - start
+
+    Timing[name] = timer
 
     out2 = sys.stdout.getvalue()
     sys.stdout = stdout
@@ -64,7 +75,7 @@ if var1 <= var2:
 print(var1)
 print(var2)
 """
-    return make_test(src)
+    return make_test(src, 'single_condition_if_statement_test')
 
 def function_test():
     src = \
@@ -88,7 +99,7 @@ def factorial(n):
     return n * factorial(n - 1)
 print(fib(10+factorial(3))+factorial(10-fib(3)))
 """
-    return make_test(src)
+    return make_test(src, 'function_test')
 
 
 def order_of_precedence_test():
@@ -106,7 +117,7 @@ print(var4)
 print(var5)
 """
 
-    return make_test(src)
+    return make_test(src, 'order_of_precedence_test')
 
 
 def simple_vars_test():
@@ -119,7 +130,8 @@ print(var1)
 print(var2)
 print(var3)
 """
-    return make_test(src)
+    return make_test(src, 'simple_vars_test')
+
 
 def if_with_else():
     src = \
@@ -133,7 +145,7 @@ elif v1 == 2:
 else:
     print(1111)
 """
-    return make_test(src)
+    return make_test(src, 'if_with_else')
 
 
 def loop_test():
@@ -143,14 +155,20 @@ for i in range(10):
     if i == 5:
         continue
     print(i)
+else:
+    print(123123123)
 i = 0
 while i < 10:
     i = i + 1
     if i == 2:
         continue
     print(i)
+    if i == 5:
+        break
+else:
+    print(321123)
 """
-    return make_test(src)
+    return make_test(src, 'loop_test')
 
 
 def if_without_else():
@@ -184,13 +202,13 @@ print(v4)
 print(v5)
 print(v10)
 """
-    return make_test(src)
+    return make_test(src, 'if_without_else')
 
 
 def full_test():
     src = open('full_test.py', 'r').read()
 
-    return make_test(src)
+    return make_test(src, 'full_test')
 
 
 def main():
@@ -241,6 +259,9 @@ def run_all():
             if '--src' in sys.argv:
                 print(res[3])
         else:
+            if '-t' in sys.argv or '--timing' in sys.argv:
+                print(bcolors.OKBLUE + str(idx + 1) + '. ' + k[0] +
+                      ' passed! Python: %f, You: %f' % (Timing[k[1].__name__][1], Timing[k[1].__name__][0]))
             print(bcolors.OKBLUE + str(idx + 1) + '. ' + k[0] + ' passed!')
             if '-v' in sys.argv or '--verbose' in sys.argv:
                 print('Expected: ', res[1])
@@ -252,7 +273,15 @@ def run_all():
         color = bcolors.HEADER
     else:
         color = bcolors.FAIL
-    print('%sTests completed with %d/%d passed!%s' % (color, cnt, len(tests), bcolors.ENDC))
+    if '-t' in sys.argv or '--timing' in sys.argv:
+        python = 0
+        me = 0
+        for t in Timing:
+            me += Timing[t][0]
+            python += Timing[t][1]
+        print('%sTests completed with %d/%d passed! Python: %f, You: %f' % (color, cnt, len(tests), python, me))
+    else:
+        print('%sTests completed with %d/%d passed!%s' % (color, cnt, len(tests), bcolors.ENDC))
 
 
 if __name__ == "__main__":

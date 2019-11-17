@@ -11,7 +11,6 @@ class Parser(object):
         self.current_indent = 0
 
     def error(self, error_code, token):
-        print(token)
         raise ParserError(error_code=error_code.value, token=token, message=f'{error_code.value} -> {token}')
 
     def eat(self, token_type):
@@ -104,7 +103,7 @@ class Parser(object):
 
         return result
 
-    def while_loop(self):
+    def while_loop(self, indent):
         self.eat(TokenType.WHILE)
         condition = self.condition()
         self.eat(TokenType.COLON)
@@ -112,7 +111,7 @@ class Parser(object):
         exec_block = self.block(self.get_indent(), block_type=LoopBlock)
 
         else_exec_block = None
-        if self.current_token.type == TokenType.ELSE:
+        if self.current_token.type == TokenType.ELSE and indent == self.get_indent():
             self.eat(TokenType.ELSE)
             self.eat(TokenType.COLON)
             else_exec_block = self.block(self.get_indent())
@@ -123,7 +122,7 @@ class Parser(object):
         self.eat(TokenType.CONTINUE)
         return Continue()
 
-    def for_loop(self):
+    def for_loop(self, indent):
         self.eat(TokenType.FOR)
         var = self.variable_decl()
         self.eat(TokenType.IN)
@@ -131,18 +130,18 @@ class Parser(object):
             self.eat(TokenType.RANGE)
             end = 'range'
             self.eat(TokenType.LPAREN)
-            range = [self.factor()]
+            range = [self.expr()]
 
             while self.current_token.type == TokenType.COMMA:
                 self.eat(TokenType.COMMA)
-                range.append(self.factor())
+                range.append(self.expr())
                 if len(range) > 3:
                     self.error(ErrorCode.PARAMS, self.current_token)
             self.eat(TokenType.RPAREN)
             self.eat(TokenType.COLON)
             exec_block = self.block(self.get_indent(), block_type=LoopBlock)
             else_exec_block = None
-            if self.current_token.type == TokenType.ELSE:
+            if self.current_token.type == TokenType.ELSE and indent == self.get_indent():
                 self.eat(TokenType.ELSE)
                 self.eat(TokenType.COLON)
                 else_exec_block = self.block(self.get_indent())
@@ -161,7 +160,7 @@ class Parser(object):
         if self.current_token.type == TokenType.ID:
             node = self.assignment_statement()
         elif self.current_token.type == TokenType.IF:
-            node = self.if_statement()
+            node = self.if_statement(self.get_indent())
         elif self.current_token.type == TokenType.DEF:
             node = self.func_def()
         elif self.current_token.type == TokenType.RETURN:
@@ -169,14 +168,20 @@ class Parser(object):
         elif self.current_token.type == TokenType.FUNC_CALL:
             node = self.func_call()
         elif self.current_token.type == TokenType.WHILE:
-            node = self.while_loop()
+            node = self.while_loop(self.get_indent())
         elif self.current_token.type == TokenType.FOR:
-            node = self.for_loop()
+            node = self.for_loop(self.get_indent())
         elif self.current_token.type == TokenType.CONTINUE:
             node = self.cont()
+        elif self.current_token.type == TokenType.BREAK:
+            node = self.break_loop()
         else:
             node = self.empty()
         return node
+
+    def break_loop(self):
+        self.eat(TokenType.BREAK)
+        return Break()
 
     def func_call(self):
         name = self.current_token.value
@@ -208,9 +213,8 @@ class Parser(object):
 
         return Params(params, name)
 
-    def if_statement(self):
+    def if_statement(self, indent):
         self.eat(TokenType.IF)
-        # print('We got an if')
 
         condition = self.condition()
 
@@ -220,7 +224,7 @@ class Parser(object):
         elifs = []
         elseObj = None
 
-        while self.current_token.type == TokenType.ELIF:
+        while self.current_token.type == TokenType.ELIF and indent == self.get_indent():
             self.eat(TokenType.ELIF)
             cond = self.condition()
             self.eat(TokenType.COLON)
@@ -228,7 +232,7 @@ class Parser(object):
             ex_block = self.block(self.get_indent())
             elifs.append(ElIf(cond, ex_block))
 
-        if self.current_token.type == TokenType.ELSE:
+        if self.current_token.type == TokenType.ELSE and indent == self.get_indent():
             self.eat(TokenType.ELSE)
             self.eat(TokenType.COLON)
 
@@ -251,7 +255,6 @@ class Parser(object):
                 self.eat(TokenType.RPAREN)
             else:
                 exprs.append((self.expr(), token.type))
-        # print(exprs)
         return Condition(exprs)
 
     def expr(self):
@@ -270,23 +273,18 @@ class Parser(object):
     def assignment_statement(self):
         left = self.variable_decl()
         token = self.current_token
-        # print(self.current_token)
         self.eat(TokenType.ASSIGN)
         right = self.expr()
-        # left = VarDecl(left, self.get_var_type(right))
         node = Assign(left, token, right)
 
         return node
 
     def variable_decl(self):
-        # print('VarDecl')
         node = VarDecl(self.current_token.value)
-        # print(self.current_token.value)
         self.eat(TokenType.ID)
         return node
 
     def variable(self):
-        # print(self.current_token)
         node = Var(self.current_token)
         self.eat(TokenType.ID)
         return node
@@ -296,7 +294,6 @@ class Parser(object):
 
     def parse(self):
         node = self.program()
-        # print(self.current_token)
         if self.current_token.type != TokenType.EOF:
             self.error()
         return node

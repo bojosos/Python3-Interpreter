@@ -35,6 +35,7 @@ class TokenType(Enum):
     RANGE            = 'range'
     ENUMERATE        = 'enumerate'
     CONTINUE         = 'continue'
+    BREAK            = 'break'
 
     # misc
     EOF              = 'EOF'

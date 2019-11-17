@@ -5,6 +5,7 @@ from symbol_table import SymbolTreeNode
 from activation_record import ARType, ActivationRecord
 from symbol import VarSymbol, FuncDefSymbol, IfStatementSymbol, Symbol
 from error import InterpreterError, ErrorCode
+from builtin import Builtins
 
 
 class Interpreter(NodeVisitor):
@@ -15,22 +16,30 @@ class Interpreter(NodeVisitor):
         self.symbol_tree = SymbolTreeNode('program', None, None)
         self.call_stack = CallStack()
         self.cont = False
+        self.breaking = False
+        self.builtins = Builtins()
 
     def visit_Program(self, node):
         self.visit(node.block)
 
     def visit_Block(self, node):
         for child in node.children:
-            if self.cont:
+            if self.cont or self.breaking:
                 break
             if self.call_stack.count != 0:
                 break
             self.visit(child)
 
+    def visit_Break(self, node):
+        self.breaking = True
+
     def visit_LoopBlock(self, node):
         for child in node.children:
             if self.cont:
                 self.cont = False
+                return False
+            if self.breaking:
+                self.breaking = False
                 return True
             if self.call_stack.count != 0:
                 break
@@ -105,7 +114,8 @@ class Interpreter(NodeVisitor):
 
     def visit_WhileLoop(self, node):
         while self.visit(node.condition):
-            self.visit(node.exec_block)
+            if self.visit(node.exec_block):
+                break
         else:
             if node.else_exec_block is not None:
                 self.visit(node.else_exec_block)
@@ -114,7 +124,8 @@ class Interpreter(NodeVisitor):
         if node.end == 'range':
             for i in range(self.visit(node.range[0]), self.visit(node.range[1]), self.visit(node.range[2])):
                 self.symbol_tree.insert_var(VarSymbol(self.visit(node.var), i))
-                self.visit(node.exec_block)
+                if self.visit(node.exec_block):
+                    break
             else:
                 if node.else_exec_block is not None:
                     self.visit(node.else_exec_block)
@@ -124,23 +135,17 @@ class Interpreter(NodeVisitor):
 
     def visit_FuncCall(self, node):
 
-        if node.name == 'print':
-            self.symbol_tree.insert_child(Symbol('print'))
+        if node.name in self.builtins.names:
+            self.symbol_tree.insert_child(Symbol(node.name))
             self.symbol_tree = self.symbol_tree.children[-1]
-            for idx, par in enumerate(node.params.params):
-                val = self.visit(par)
-                # This prints, should be here
-                if len(node.params.params) > 1:
-                    if idx == len(node.params.params) - 1:
-                        print(val, end='')
-                    else:
-                        print(val, end=' ')
-                else:
-                    print(val)
-            if len(node.params.params) > 1:
-                print()
+
+            visited_params = []
+            for param in node.params.params:
+                visited_params.append(self.visit(param))
+            ret = self.builtins.call(node.name, visited_params)
+
             self.symbol_tree = self.symbol_tree.parent
-            return
+            return ret
 
         func = self.symbol_tree.lookup_function(node.name)
         if func:

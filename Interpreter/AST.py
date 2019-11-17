@@ -44,15 +44,17 @@ class VarDecl(AST):
 class WhileLoop(AST):
     def __init__(self, condition, exec_block, else_exec_block):
         self.condition = condition
-        self.broken = True
         self.exec_block = exec_block
         self.else_exec_block = else_exec_block
+
+
+class Break(AST):
+    pass
 
 
 class ForLoop(AST):
     def __init__(self, var, end, range, exec_block, else_exec_block):
         self.var = var
-        self.broken = False
         self.end = end
         self.exec_block = exec_block
         self.else_exec_block = else_exec_block

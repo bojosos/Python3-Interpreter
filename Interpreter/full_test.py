@@ -10,13 +10,13 @@ def fib(n):
     def check(n):
         if n == 0:
             return 0
-        elif n == 1:
+        if n == 1:
             return 1
 
     if n == 0 or n == 1:
         return check(n)
-    else:
-        return fib(n - 1) + fib(n - 2)
+
+    return fib(n - 1) + fib(n - 2)
 
 
 a = 5
@@ -26,17 +26,17 @@ fff = fib(a)
 def factorial(n):
     if n == 1:
         return 1
-    else:
-        return n * factorial(n - 1)
+
+    return n * factorial(n - 1)
 
 
-a = 6
+a = 100
 res = factorial(a)
 print(c)
 print(ff)
-print(fff)
 print(ab(2000))
 print(res)
+print(fff)
 
 v1 = 5
 v2 = 10
@@ -60,7 +60,7 @@ if v1 < v2:
             v10 = 1
             v3 = 100
     v3 = 30
-print(v3, v10)
+
 print(1 + 2 == 3)
 print(1 == 1)
 print(1 + 2 == 1)
@@ -74,5 +74,18 @@ for i in range(10):
 
 for i in range(10):
     if i == 2:
+        break
+    print(i)
+else:
+    print(12000123)
+print(max(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+print(min(321, 312, 12, 3, 123, 32, 15, 1325, 13, 5, 34, 2, 41, 4, 12, 3, 1))
+while i < 10:
+    i = i + 1
+    if i == 2:
         continue
     print(i)
+    if i == 5:
+        break
+else:
+    print(321123)
