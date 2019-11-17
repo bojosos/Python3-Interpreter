@@ -39,14 +39,11 @@ class Parser(object):
             return node
         if token.type == TokenType.INTEGER_CONST:
             self.eat(TokenType.INTEGER_CONST)
-            # print('Eating int')
-            # print(self.current_token)
             return Num(token.value)
         if token.type == TokenType.REAL_CONST:
             self.eat(TokenType.REAL_CONST)
             return Num(token.value)
         if token.type == TokenType.LPAREN:
-            # print('LPAREN')
             self.eat(TokenType.LPAREN)
             node = self.expr()
             self.eat(TokenType.RPAREN)
@@ -61,7 +58,6 @@ class Parser(object):
     def term(self):
         """term : factor ((MUL | DIV) factor)*"""
         node = self.factor()
-        # print(node)
         while self.current_token.type in (TokenType.MUL, TokenType.INTEGER_DIV, TokenType.FLOAT_DIV):
             token = self.current_token
             if token.type == TokenType.MUL:
@@ -83,7 +79,6 @@ class Parser(object):
             self.eat(token.type)
 
             node = BinOp(node, token, self.term())
-        # print(node)
         return node
 
     def program(self):
@@ -101,16 +96,11 @@ class Parser(object):
         return root
 
     def statement_list(self, indent):
-        node = self.statement(indent)
-        # print(node)
+        node = self.statement()
 
         result = [node]
-        # print('indent: %d, get_indent %d' % (indent, self.get_indent()))
         while indent == self.get_indent() and self.current_token.type != TokenType.EOF:
-            result.append(self.statement(self.get_indent()))
-
-        # if self.current_token.type == TokenType.ID:
-        # self.error()
+            result.append(self.statement())
 
         return result
 
@@ -161,24 +151,19 @@ class Parser(object):
             end = 'enumerate'
         else:
             end = self.id()
+
     def ret(self):
         self.eat(TokenType.RETURN)
         expr = self.expr()
-        # print(expr)
         return Return(expr)
 
-    def statement(self, indent):
-
-        # print('token in statement: ', self.current_token)
-        #        print('current_indent: %d, indent: %d' % (self.current_indent, indent))
-
-        # print(self.get_indent())
+    def statement(self):
         if self.current_token.type == TokenType.ID:
             node = self.assignment_statement()
         elif self.current_token.type == TokenType.IF:
-            node = self.if_statement(indent)
+            node = self.if_statement()
         elif self.current_token.type == TokenType.DEF:
-            node = self.func_def(self.get_indent())
+            node = self.func_def()
         elif self.current_token.type == TokenType.RETURN:
             node = self.ret()
         elif self.current_token.type == TokenType.FUNC_CALL:
@@ -191,8 +176,6 @@ class Parser(object):
             node = self.cont()
         else:
             node = self.empty()
-            # print('it\'s else')
-        # print('token after statement: ', self.current_token)
         return node
 
     def func_call(self):
@@ -204,7 +187,7 @@ class Parser(object):
 
         return FuncCall(name, params)
 
-    def func_def(self, indent):
+    def func_def(self):
         self.eat(TokenType.DEF)
         name = self.current_token.value
         self.eat(TokenType.ID)
@@ -225,7 +208,7 @@ class Parser(object):
 
         return Params(params, name)
 
-    def if_statement(self, indent):
+    def if_statement(self):
         self.eat(TokenType.IF)
         # print('We got an if')
 
@@ -241,8 +224,7 @@ class Parser(object):
             self.eat(TokenType.ELIF)
             cond = self.condition()
             self.eat(TokenType.COLON)
-            if indent >= self.get_indent():
-                self.error()
+
             ex_block = self.block(self.get_indent())
             elifs.append(ElIf(cond, ex_block))
 
